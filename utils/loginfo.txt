@@ -1,7 +1,7 @@
 lang: c
 action: save
 from_domain: i
-loginname: 834559390@qq.com
-password: 0319Cmr2Xzy
+loginname: ******@qq.com
+password: ******
 verifycode:
 isread: on
