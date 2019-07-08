@@ -3,6 +3,7 @@
 #perpare requesets' parameters
 from utils.preparams import preparam
 from utils.mythread import getResp_thread, parseData_thread
+from utils.dataprocess import DataProcessor
 from queue import Queue
 import requests
 from lxml import etree
@@ -71,13 +72,14 @@ class mainflow():
             data = self.data_queue.get(block=True)
             data.to_csv(outfile, mode='a', header=False, index=False, encoding='utf-8', sep='~')
 
-
+    def run(self):
+        self.login(header=preparam().user_agent) #登录
+        self.put_url() #生成url并放入序列中
+        self.startThreading() #启动线程
+        self.writedata('data/jobinfo_%s.txt' % time.strftime('%Y%m%d', time.localtime(time.time()))) #写入到本地txt
+        return None
 
 if __name__ == "__main__":
     flow = mainflow('数据分析师')
-    flow.login(header=preparam().user_agent)
-    flow.put_url()
-    flow.startThreading()
-    ts = time.strftime('%Y%m%d', time.localtime(time.time()))
-    flow.writedata('data/jobinfo_%s.txt' % ts)
-
+    flow.run()
+    DataProcessor().process()
