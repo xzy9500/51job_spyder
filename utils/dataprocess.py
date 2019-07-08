@@ -18,8 +18,13 @@ class DataProcessor():
 
     def process(self):
         data = self.readData() #read from text file
-        minsal = data.salarytest[data.salarytest.str.match('.+-.+千/月') == True].str.extract('(.+-)')[0].str.strip('-')
-        data = data.join(minsal)
+        sal = data.salary.str.extract('(?P<min_salary>\d+\.\d+|\d+)?(?P<max_salary>-\d+\.\d+|-\d+)')
+        sal.max_salary = sal.max_salary.str.strip('-')
+        data = data.join(sal)
+        data['salary_unit'] = data.salarytest.str.slice(-3, -2)
+        data['salary_freq'] = data.salarytest.str.slice(-1)
+        data['lc1'] = [each[0] for each in data.location.str.split('-')]
+        data['lc2'] = [each[1] if len(each) >= 2 else 'null' for each in data.location.str.split('-')]
 
         db = MySqlDataBase()
         db.connetDB()
@@ -27,32 +32,12 @@ class DataProcessor():
         city_df = db.toDataFrame(city_tup, header_map={'f1': 'city', 'f2': 'prov'})
         db.connetion.close()
 
+        data = pd.merge(data, city_df, how='left', left_on='lc1', right_on='city')
+
+        data.to_csv(self.file, mode='a', header=True, index=False, encoding='utf-8', sep='~')
+        return None
 
 
-    def getMinimum_sal(self, salary_col):
-        for salary in salary_col:
-            if salary.find('千/月') > 0 and salary.find('-') > 0:
-                minsal = float(salary.split('-')[0])*1000
-            elif salary.find('万/月') > 0 and salary.find('-') > 0:
-                minsal = float(salary.split('-')[0]) * 10000
-            elif salary.find('万/年') > 0 and salary.find('-') > 0:
-                minsal = float(salary.split('-')[0]) * 10000 / 12
-            elif salary.find('元/天') > 0:
-                minsal = float(salary.replace('元/天', '')) * 22
-            elif salary.find('万以上/年') > 0 or salary.find('万以下/年') > 0:
-                minsal = float(salary[:-5]) * 10000 / 12
-            elif salary.find('万以上/年') > 0 or salary.find('万以下/年') > 0:
-                minsal = float(salary[:-5]) * 10000 / 12
-            elif salary.find('万以上/月') > 0 or salary.find('万以下/月') > 0:
-                minsal = float(salary[:-5]) * 10000
-            elif salary.find('千以下/月') > 0 or salary.find('千以上/月') > 0:
-                minsal = float(salary[:-5]) * 1000
-            elif salary.find('元/小时') > 0:
-                minsal = 0
-            else:
-                print(salary)
-                minsal = 0
-        return minsal
 
     #find float in a string
     def find_float(self, str):
